@@ -269,19 +269,12 @@ def download_ionex(date_str, tec_dir, sol_code='jpl', product_type='FINAL', inte
         fname_dst_uncomp = os.path.join(tec_dir, basename_dst_uncomp)
         ionex_zip_extension = fname_src[fname_src.rfind('.'):]
         fname_dst = fname_dst_uncomp + ionex_zip_extension
-        if os.path.exists(fname_dst_uncomp):
-            info_channel.log(f'{fname_dst_uncomp} already exists, skip downloading and uncompressing.')
-            return fname_dst_uncomp
-        elif os.path.exists(fname_dst):
-            info_channel.log(f'{fname_dst} already exists, skip downloading.')
-            ionex_download_successful = True
-            break
-        else:
-            ionex_download_successful = download_url(fname_src, fname_dst)
 
-            if ionex_download_successful:
-                info_channel.log(f'Downloaded IONEX file: {fname_dst}')
-                break
+        ionex_download_successful = download_url(fname_src, fname_dst)
+
+        if ionex_download_successful:
+            info_channel.log(f'Downloaded IONEX file: {fname_dst}')
+            break
 
     if not ionex_download_successful:
         err_channel.log(f'Failed to download IONEX file: {fname_src}')
@@ -418,8 +411,7 @@ def get_ionex_height(tec_file):
 
 
 def ionosphere_delay(utc_time, wavelength,
-                     tec_file, lon_arr, lat_arr, inc_arr,
-                     tec_dir=None, sol_code='jpl', product_type='FINAL', interval='02H'):
+                     tec_file, lon_arr, lat_arr, inc_arr):
     '''
     Calculate ionosphere delay for geolocation
 
@@ -430,21 +422,13 @@ def ionosphere_delay(utc_time, wavelength,
     wavelength: float
         Wavelength of the signal
     tec_file: str
-        Path to the TEC file. If None or file doesn't exist, will attempt to download.
+        Path to the TEC file
     lon_arr: numpy.ndarray
         array of longitude in radar grid. unit: degrees
     lat_arr: numpy.ndarray
         array of latitude in radar grid. unit: degrees
     inc_arr: numpy.ndarray
         array of incidence angle in radar grid. unit: degrees
-    tec_dir: str, optional
-        Directory to store downloaded TEC files. Required if tec_file is None.
-    sol_code: str, optional
-        IGS TEC analysis center code for downloading
-    product_type: str, optional
-        Either 'FINAL' or 'RAPID' for downloading
-    interval: str, optional
-        Time interval for TEC maps
 
     Returns
     -------
@@ -453,26 +437,13 @@ def ionosphere_delay(utc_time, wavelength,
     '''
     warning_channel = journal.warning('ionosphere_delay')
 
-    # If tec_file is not provided or doesn't exist, download it
-    if not tec_file or not os.path.exists(tec_file):
-        if not tec_dir:
-            warning_channel.log('Both "tec_file" and "tec_dir" were not provided. '
-                               'Ionosphere correction will not be applied.')
-            return np.zeros(lon_arr.shape)
-        
-        # Create tec_dir if it doesn't exist
-        os.makedirs(tec_dir, exist_ok=True)
-        
-        # Generate date string from utc_time
-        date_str = utc_time.strftime('%Y%m%d')
-        try:
-            warning_channel.log(f'Downloading IONEX file for date {date_str}...')
-            tec_file = download_ionex(date_str, tec_dir, sol_code, product_type, interval)
-            warning_channel.log(f'Successfully downloaded IONEX file: {tec_file}')
-        except Exception as e:
-            warning_channel.log(f'Failed to download IONEX file: {e}. '
-                               'Ionosphere correction will not be applied.')
-            return np.zeros(lon_arr.shape)
+    if not tec_file:
+        warning_channel.log('"tec_file" was not provided. '
+                            'Ionosphere correction will not be applied.')
+        return np.zeros(lon_arr.shape)
+
+    if not os.path.exists(tec_file):
+        raise RuntimeError(f'IONEX file was not found: {tec_file}')
 
     utc_tod_sec = (utc_time.hour * 3600.0
                    + utc_time.minute * 60.0

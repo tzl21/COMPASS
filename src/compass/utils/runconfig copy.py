@@ -398,10 +398,6 @@ class RunConfig:
         return self.groups.dynamic_ancillary_file_group.tec_file
 
     @property
-    def tec_dir_path(self) -> str:
-        return self.groups.dynamic_ancillary_file_group.tec_dir_path
-
-    @property
     def is_reference(self) -> bool:
         return self.groups.input_file_group.reference_burst.is_reference
 

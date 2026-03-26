@@ -20,7 +20,6 @@ runconfig:
            # Description for DEM used for the processing
            dem_description: str(required=False)
            # TEC file in IONEX format for ionosphere correction
-           tec_dir_path: str(required=False)
            tec_file: str(required=False)
            # Troposphere weather model
            weather_model_file: str(required=False)
@@ -116,10 +115,6 @@ rdr2geo_options:
     lines_per_block: int(min=1, required=False)
     # Secondary number of iterations
     extraiter: int(min=1, required=False)
-    # Enable/disable computation of topo layers
-    enabled: bool(required=False)
-    # Enable/disable output of geocode metadata layers
-    geocode_metadata_layers: bool(required=False)
     # Enable/disable computation of latitude raster
     compute_latitude: bool(required=False)
     # Enable/disable computation of longitude raster

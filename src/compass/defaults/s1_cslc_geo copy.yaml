@@ -80,10 +80,6 @@ runconfig:
               lines_per_block: 1000
               # Secondary number of iterations
               extraiter: 10
-              # Enable/disable computation of topo layers
-              enabled: False
-              # Enable/disable output of geocode metadata layers
-              geocode_metadata_layers: False
               # Enable/disable computation of latitude raster
               compute_latitude: False
               # Enable/disable computation of longitude raster

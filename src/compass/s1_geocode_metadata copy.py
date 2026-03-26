@@ -471,7 +471,8 @@ if __name__ == "__main__":
                                       workflow_name='s1_cslc_geo')
 
     for _, bursts in bursts_grouping_generator(cfg.bursts):
-        burst = bursts[0]        
+        burst = bursts[0]
+
         # Generate required static layers
         if cfg.rdr2geo_params.enabled:
             s1_rdr2geo.run(cfg, save_in_scratch=True)

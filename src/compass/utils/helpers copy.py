@@ -518,10 +518,6 @@ def download_url(url:str, out_file_path:str):
         error_channel.log(f"Resource does not exist at: {url}")
         return False
 
-    out_dir = os.path.dirname(out_file_path)
-    if out_dir and not os.path.exists(out_dir):
-        os.makedirs(out_dir, exist_ok=True)
-        
     info_channel.log(f"Downloading {url} to {out_file_path}")
 
     r = requests.get(url, stream=True)
