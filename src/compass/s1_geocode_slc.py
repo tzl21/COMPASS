@@ -91,7 +91,6 @@ def run(cfg: GeoRunConfig):
             rg_lut, az_lut = \
                 cumulative_correction_luts(burst, dem_path=cfg.dem,
                                            tec_path=cfg.tec_file,
-                                           tec_dir_path=cfg.tec_dir_path,
                                            scratch_path=scratch_path,
                                            weather_model_path=cfg.weather_model_file,
                                            rg_step=cfg.lut_params.range_spacing,

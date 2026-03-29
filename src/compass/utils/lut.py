@@ -16,7 +16,6 @@ from compass.utils.helpers import write_raster
 
 
 def cumulative_correction_luts(burst, dem_path, tec_path,
-                               tec_dir_path=None,
                                scratch_path=None,
                                weather_model_path=None,
                                rg_step=200, az_step=0.25,
@@ -33,7 +32,7 @@ def cumulative_correction_luts(burst, dem_path, tec_path,
     dem_path: str
         Path to the DEM file
     tec_path: str
-        Path to the TEC file in IONEX format
+        Path to the TEC file in IONEX format, or a directory containing IONEX files
     scratch_path: str
         Path to the scratch directory
     weather_model_path: str
@@ -64,7 +63,6 @@ def cumulative_correction_luts(burst, dem_path, tec_path,
         compute_geocoding_correction_luts(burst,
                                           dem_path=dem_path,
                                           tec_path=tec_path,
-                                          tec_dir_path=tec_dir_path,
                                           scratch_path=scratch_path,
                                           weather_model_path=weather_model_path,
                                           rg_step=rg_step,
@@ -119,8 +117,7 @@ def cumulative_correction_luts(burst, dem_path, tec_path,
     return rg_lut, az_lut
 
 
-def compute_geocoding_correction_luts(burst, dem_path, tec_path, 
-                                      tec_dir_path=None,
+def compute_geocoding_correction_luts(burst, dem_path, tec_path,
                                       scratch_path=None,
                                       weather_model_path=None,
                                       rg_step=200, az_step=0.25,
@@ -136,7 +133,7 @@ def compute_geocoding_correction_luts(burst, dem_path, tec_path,
     dem_path: str
         Path to the DEM required for azimuth FM rate mismatch.
     tec_path: str
-        Path to the TEC file for ionosphere correction
+        Path to the TEC file in IONEX format, or a directory containing IONEX files
     scratch_path: str
         Path to the scratch directory.
         If `None`, `burst.az_fm_rate_mismatch_mitigation()` will
@@ -237,11 +234,10 @@ def compute_geocoding_correction_luts(burst, dem_path, tec_path,
     rg_set = resize(rg_set_temp, out_shape, **kwargs)
     az_set = resize(az_set_temp, out_shape, **kwargs)
 
-    # Compute ionosphere delay
-    tec_dir = tec_dir_path if tec_dir_path else None
+    # Compute ionosphere delay (tec_path can be a single file or a directory)
     los_ionosphere = ionosphere_delay(burst.sensing_mid,
                                       burst.wavelength,
-                                      tec_path, lon, lat, inc_angle,tec_dir=tec_dir)
+                                      tec_path, lon, lat, inc_angle)
 
     # Compute wet and dry troposphere delays using RAiDER
     wet_los_tropo, dry_los_tropo, los_static_tropo =\

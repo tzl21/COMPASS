@@ -20,7 +20,6 @@ runconfig:
            # Description for DEM used for the processing
            dem_description: str(required=False)
            # TEC file in IONEX format for ionosphere correction
-           tec_dir_path: str(required=False)
            tec_file: str(required=False)
            # Troposphere weather model
            weather_model_file: str(required=False)

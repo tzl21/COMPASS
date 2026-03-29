@@ -419,7 +419,7 @@ def get_ionex_height(tec_file):
 
 def ionosphere_delay(utc_time, wavelength,
                      tec_file, lon_arr, lat_arr, inc_arr,
-                     tec_dir=None, sol_code='jpl', product_type='FINAL', interval='02H'):
+                     sol_code='jpl', product_type='FINAL', interval='02H'):
     '''
     Calculate ionosphere delay for geolocation
 
@@ -430,15 +430,16 @@ def ionosphere_delay(utc_time, wavelength,
     wavelength: float
         Wavelength of the signal
     tec_file: str
-        Path to the TEC file. If None or file doesn't exist, will attempt to download.
+        Path to the TEC file or directory containing TEC files.
+        If a directory is provided, the function will look for a file
+        corresponding to the date of `utc_time` in that directory.
+        If the file does not exist, it will be downloaded to that directory.
     lon_arr: numpy.ndarray
         array of longitude in radar grid. unit: degrees
     lat_arr: numpy.ndarray
         array of latitude in radar grid. unit: degrees
     inc_arr: numpy.ndarray
         array of incidence angle in radar grid. unit: degrees
-    tec_dir: str, optional
-        Directory to store downloaded TEC files. Required if tec_file is None.
     sol_code: str, optional
         IGS TEC analysis center code for downloading
     product_type: str, optional
@@ -453,26 +454,48 @@ def ionosphere_delay(utc_time, wavelength,
     '''
     warning_channel = journal.warning('ionosphere_delay')
 
-    # If tec_file is not provided or doesn't exist, download it
-    if not tec_file or not os.path.exists(tec_file):
-        if not tec_dir:
-            warning_channel.log('Both "tec_file" and "tec_dir" were not provided. '
-                               'Ionosphere correction will not be applied.')
-            return np.zeros(lon_arr.shape)
-        
-        # Create tec_dir if it doesn't exist
-        os.makedirs(tec_dir, exist_ok=True)
-        
-        # Generate date string from utc_time
+    # Determine if tec_file is a directory or a file
+    if os.path.isdir(tec_file):
+        # It's a directory: attempt to locate or download the TEC file for the given date
+        tec_dir = tec_file
         date_str = utc_time.strftime('%Y%m%d')
         try:
-            warning_channel.log(f'Downloading IONEX file for date {date_str}...')
+            warning_channel.log(f'Looking for IONEX file for date {date_str} in {tec_dir}...')
             tec_file = download_ionex(date_str, tec_dir, sol_code, product_type, interval)
-            warning_channel.log(f'Successfully downloaded IONEX file: {tec_file}')
+            warning_channel.log(f'Successfully obtained IONEX file: {tec_file}')
         except Exception as e:
-            warning_channel.log(f'Failed to download IONEX file: {e}. '
+            warning_channel.log(f'Failed to obtain IONEX file: {e}. '
                                'Ionosphere correction will not be applied.')
             return np.zeros(lon_arr.shape)
+    elif not os.path.exists(tec_file):
+        # The given path is not a directory and the file does not exist.
+        # Try to interpret the directory part and download if possible.
+        tec_dir = os.path.dirname(tec_file)
+        if tec_dir and os.path.exists(tec_dir):
+            # The directory exists; attempt to download the file into it.
+            date_str = utc_time.strftime('%Y%m%d')
+            try:
+                warning_channel.log(f'File {tec_file} not found. Attempting to download to {tec_dir}...')
+                downloaded_file = download_ionex(date_str, tec_dir, sol_code, product_type, interval)
+                if downloaded_file == tec_file:
+                    warning_channel.log(f'Successfully downloaded IONEX file: {tec_file}')
+                else:
+                    warning_channel.log(f'Downloaded file {downloaded_file} does not match expected {tec_file}. Using {downloaded_file}.')
+                    tec_file = downloaded_file
+            except Exception as e:
+                warning_channel.log(f'Failed to download IONEX file: {e}. '
+                                   'Ionosphere correction will not be applied.')
+                return np.zeros(lon_arr.shape)
+        else:
+            warning_channel.log(f'Cannot find or create directory for TEC file: {tec_file}. '
+                               'Ionosphere correction will not be applied.')
+            return np.zeros(lon_arr.shape)
+
+    # At this point, tec_file should be a valid existing file
+    if not os.path.isfile(tec_file):
+        warning_channel.log(f'Invalid TEC file: {tec_file}. '
+                           'Ionosphere correction will not be applied.')
+        return np.zeros(lon_arr.shape)
 
     utc_tod_sec = (utc_time.hour * 3600.0
                    + utc_time.minute * 60.0

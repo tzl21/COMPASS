@@ -72,7 +72,7 @@ def create_parser():
     optional.add_argument('--unzipped', action='store_true',
                           help='If flag is set, assumes that the SLCs are unzipped, '
                                'and only the SAFE directory is provided.')
-    optional.add_argument('--tec-dir-path', type=str, default=None,
+    optional.add_argument('--tec-path', type=str, default=None,
                           help='Path to TEC file for ionospheric correction.')
     optional.add_argument('--static-layers', action='store_true',
                           help='If flag is set, generate the static layers of each burst.')
@@ -227,7 +227,7 @@ def get_common_burst_ids(data):
 
 
 def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
-                     y_spac, enable_corrections, burst_db_file, tec_dir_path):
+                     y_spac, enable_corrections, burst_db_file, tec_path):
     """
     Create runconfig to process geocoded bursts
 
@@ -279,8 +279,8 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
     groups['static_ancillary_file_group']['burst_database_file'] = burst_db_file
     
     # Tec path
-    if tec_dir_path is not None:
-        groups['dynamic_ancillary_file_group']['tec_dir_path'] = tec_dir_path
+    if tec_path is not None:
+        groups['dynamic_ancillary_file_group']['tec_path'] = tec_path
 
     # Product path
     product['product_path'] = work_dir
@@ -302,7 +302,7 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
     return runconfig_path
 
 def create_runconfig_static(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
-                           y_spac, enable_corrections, burst_db_file, tec_dir_path):
+                           y_spac, enable_corrections, burst_db_file, tec_path):
     """
     Create runconfig to process geocoded bursts with rdr2geo all set to True
     
@@ -355,8 +355,8 @@ def create_runconfig_static(burst_map_row, dem_file, work_dir, flatten, pol, x_s
     groups['static_ancillary_file_group']['burst_database_file'] = burst_db_file
     
     # Tec path
-    if tec_dir_path is not None:
-        groups['dynamic_ancillary_file_group']['tec_dir_path'] = tec_dir_path
+    if tec_path is not None:
+        groups['dynamic_ancillary_file_group']['tec_path'] = tec_path
 
     # Product path
     product['product_path'] = work_dir
@@ -439,7 +439,7 @@ def run(slc_dir, dem_file, burst_id=None, common_bursts_only=False, start_date=N
         end_date=None, exclude_dates=None, orbit_dir=None, work_dir='stack',
         pol='co-pol', x_spac=5, y_spac=10, bbox=None, bbox_epsg=4326,
         output_epsg=None, burst_db_file=DEFAULT_BURST_DB_FILE, flatten=True,
-        enable_corrections=True, using_zipped=True, tec_dir_path=None, static_layers=False):
+        enable_corrections=True, using_zipped=True, tec_path=None, static_layers=False):
     """Create runconfigs and runfiles generating geocoded bursts for a static
     stack of Sentinel-1 A/B SAFE files.
 
@@ -560,7 +560,7 @@ def run(slc_dir, dem_file, burst_id=None, common_bursts_only=False, start_date=N
                 y_spac=y_spac,
                 enable_corrections=enable_corrections,
                 burst_db_file=burst_db_file,
-                tec_dir_path=tec_dir_path,
+                tec_path=tec_path,
             )
             
             # 2. Create regular config for CSLC processing
@@ -574,7 +574,7 @@ def run(slc_dir, dem_file, burst_id=None, common_bursts_only=False, start_date=N
                 y_spac=y_spac,
                 enable_corrections=enable_corrections,
                 burst_db_file=burst_db_file,
-                tec_dir_path=tec_dir_path,
+                tec_path=tec_path,
             )
             
             date_str = row.burst.sensing_start.strftime("%Y%m%d")
@@ -605,7 +605,7 @@ def run(slc_dir, dem_file, burst_id=None, common_bursts_only=False, start_date=N
                 y_spac=y_spac,
                 enable_corrections=enable_corrections,
                 burst_db_file=burst_db_file,
-                tec_dir_path=tec_dir_path,
+                tec_path=tec_path,
             )
             
             date_str = row.burst.sensing_start.strftime("%Y%m%d")
@@ -643,7 +643,7 @@ def main():
         flatten=not args.no_flatten,
         enable_corrections=not args.no_corrections,
         using_zipped=not args.unzipped,
-        tec_dir_path=args.tec_dir_path,
+        tec_path=args.tec_path,
         static_layers=args.static_layers,
     )
 
