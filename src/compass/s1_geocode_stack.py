@@ -277,10 +277,10 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
     inputs['burst_id'] = [str(burst.burst_id)]
     groups['dynamic_ancillary_file_group']['dem_file'] = dem_file
     groups['static_ancillary_file_group']['burst_database_file'] = burst_db_file
-    
+
     # Tec path
     if tec_path is not None:
-        groups['dynamic_ancillary_file_group']['tec_path'] = tec_path
+        groups['dynamic_ancillary_file_group']['tec_file'] = tec_path
 
     # Product path
     product['product_path'] = work_dir
@@ -356,7 +356,7 @@ def create_runconfig_static(burst_map_row, dem_file, work_dir, flatten, pol, x_s
     
     # Tec path
     if tec_path is not None:
-        groups['dynamic_ancillary_file_group']['tec_path'] = tec_path
+        groups['dynamic_ancillary_file_group']['tec_file'] = tec_path
 
     # Product path
     product['product_path'] = work_dir
