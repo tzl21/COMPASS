@@ -227,7 +227,8 @@ def get_common_burst_ids(data):
 
 
 def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
-                     y_spac, enable_corrections, burst_db_file, tec_path):
+                     y_spac, enable_corrections, burst_db_file, tec_path,
+                     static=False):
     """
     Create runconfig to process geocoded bursts
 
@@ -253,13 +254,15 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
         Path to burst database file to use for burst bounding boxes.
     tec_path: str
         Path to TEC file for ionospheric correction.
+    static: bool
+        If True, set product_type to CSLC_S1_STATIC and enable all
+        rdr2geo static layer computations.
 
     Returns
     -------
     runconfig: str
         Path to runconfig file
     """
-    # Load default runconfig and fill it with user-defined options
     yaml_path = f'{helpers.WORKFLOW_SCRIPTS_DIR}/defaults/s1_cslc_geo.yaml'
     with open(yaml_path, 'r') as stream:
         yaml_cfg = yaml.safe_load(stream)
@@ -270,7 +273,6 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
     process = groups['processing']
     geocode = process['geocoding']
 
-    # Allocate Inputs
     burst = burst_map_row.burst
     inputs['safe_file_path'] = [burst_map_row.zip_file]
     inputs['orbit_file_path'] = [burst_map_row.orbit_path]
@@ -278,16 +280,13 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
     groups['dynamic_ancillary_file_group']['dem_file'] = dem_file
     groups['static_ancillary_file_group']['burst_database_file'] = burst_db_file
 
-    # Tec path
     if tec_path is not None:
         groups['dynamic_ancillary_file_group']['tec_file'] = tec_path
 
-    # Product path
     product['product_path'] = work_dir
     product['scratch_path'] = f'{work_dir}/scratch'
     product['sas_output_file'] = work_dir
 
-    # Geocoding
     process['polarization'] = pol
     process['correction_luts']['enabled'] = enable_corrections
     geocode['flatten'] = flatten
@@ -295,95 +294,23 @@ def create_runconfig(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
     geocode['y_posting'] = y_spac
 
     date_str = burst.sensing_start.strftime("%Y%m%d")
+
+    if static:
+        groups['primary_executable']['product_type'] = 'CSLC_S1_STATIC'
+        rdr2geo = process['rdr2geo']
+        rdr2geo['enabled'] = True
+        rdr2geo['geocode_metadata_layers'] = True
+        rdr2geo['compute_latitude'] = True
+        rdr2geo['compute_longitude'] = True
+        rdr2geo['compute_height'] = True
+        rdr2geo['compute_layover_shadow_mask'] = True
+        rdr2geo['compute_local_incidence_angle'] = True
+        rdr2geo['compute_ground_to_sat_east'] = True
+        rdr2geo['compute_ground_to_sat_north'] = True
+
     os.makedirs(f'{work_dir}/runconfigs', exist_ok=True)
-    runconfig_path = f'{work_dir}/runconfigs/geo_runconfig_{date_str}_{str(burst.burst_id)}.yaml'
-    with open(runconfig_path, 'w') as yaml_file:
-        yaml.dump(yaml_cfg, yaml_file, default_flow_style=False)
-    return runconfig_path
-
-def create_runconfig_static(burst_map_row, dem_file, work_dir, flatten, pol, x_spac,
-                           y_spac, enable_corrections, burst_db_file, tec_path):
-    """
-    Create runconfig to process geocoded bursts with rdr2geo all set to True
-    
-    Parameters
-    ----------
-    burst_map_row: namedtuple
-        one row from the dataframe method `burst_map.itertuples()`
-    dem_file: str
-        Path to DEM to use for processing
-    work_dir: str
-        Path to working directory for temp and final results
-    flatten: bool
-        Flag to enable/disable flattening
-    pol: str
-        Polarizations to process. Choices: co-pol, cross-pol, dual-pol
-    x_spac: float
-        Spacing of geocoded burst along X-direction
-    y_spac: float
-        Spacing of geocoded burst along Y-direction
-    enable_corrections: bool
-        Flag to enable/disable applying corrections to burst stacks.
-    burst_db_file: str
-        Path to burst database file to use for burst bounding boxes.
-    tec_path: str
-        Path to TEC file for ionospheric correction.
-
-    Returns
-    -------
-    runconfig: str
-        Path to runconfig file
-    """
-    # Load default runconfig and fill it with user-defined options
-    yaml_path = f'{helpers.WORKFLOW_SCRIPTS_DIR}/defaults/s1_cslc_geo.yaml'
-    with open(yaml_path, 'r') as stream:
-        yaml_cfg = yaml.safe_load(stream)
-
-    groups = yaml_cfg['runconfig']['groups']
-    inputs = groups['input_file_group']
-    product = groups['product_path_group']
-    process = groups['processing']
-    geocode = process['geocoding']
-    rdr2geo = process['rdr2geo']  # Access the rdr2geo group
-
-    # Allocate Inputs
-    burst = burst_map_row.burst
-    inputs['safe_file_path'] = [burst_map_row.zip_file]
-    inputs['orbit_file_path'] = [burst_map_row.orbit_path]
-    inputs['burst_id'] = [str(burst.burst_id)]
-    groups['dynamic_ancillary_file_group']['dem_file'] = dem_file
-    groups['static_ancillary_file_group']['burst_database_file'] = burst_db_file
-    
-    # Tec path
-    if tec_path is not None:
-        groups['dynamic_ancillary_file_group']['tec_file'] = tec_path
-
-    # Product path
-    product['product_path'] = work_dir
-    product['scratch_path'] = f'{work_dir}/scratch'
-    product['sas_output_file'] = work_dir
-
-    # Geocoding
-    process['polarization'] = pol
-    process['correction_luts']['enabled'] = enable_corrections
-    geocode['flatten'] = flatten
-    geocode['x_posting'] = x_spac
-    geocode['y_posting'] = y_spac
-
-    # Set all rdr2geo options to True
-    rdr2geo['enabled'] = True
-    rdr2geo['geocode_metadata_layers'] = True
-    rdr2geo['compute_latitude'] = True
-    rdr2geo['compute_longitude'] = True
-    rdr2geo['compute_height'] = True
-    rdr2geo['compute_layover_shadow_mask'] = True
-    rdr2geo['compute_local_incidence_angle'] = True
-    rdr2geo['compute_ground_to_sat_east'] = True
-    rdr2geo['compute_ground_to_sat_north'] = True
-
-    date_str = burst.sensing_start.strftime("%Y%m%d")
-    os.makedirs(f'{work_dir}/runconfigs', exist_ok=True)
-    runconfig_path = f'{work_dir}/runconfigs/geo_runconfig_static_{date_str}_{str(burst.burst_id)}.yaml'
+    suffix = '_static' if static else ''
+    runconfig_path = f'{work_dir}/runconfigs/geo_runconfig{suffix}_{date_str}_{str(burst.burst_id)}.yaml'
     with open(runconfig_path, 'w') as yaml_file:
         yaml.dump(yaml_cfg, yaml_file, default_flow_style=False)
     return runconfig_path
@@ -519,7 +446,7 @@ def run(slc_dir, dem_file, burst_id=None, common_bursts_only=False, start_date=N
 
     # Generate burst map and prune it if a list of burst ID is provided
     search_ext = 'zip' if using_zipped else 'SAFE'
-    zip_file_list = sorted(glob.glob(f'{slc_dir}/S1[AB]_*.{search_ext}'))
+    zip_file_list = sorted(glob.glob(f'{slc_dir}/S1[ABC]_*.{search_ext}'))
     # Remove zip files that are not in the date range before generating burst map
     zip_file_list = _filter_by_date(zip_file_list, start_date, end_date, exclude_dates)
 
@@ -538,81 +465,35 @@ def run(slc_dir, dem_file, burst_id=None, common_bursts_only=False, start_date=N
     if burst_id is not None:
         burst_map = prune_dataframe(burst_map, 'burst_id', burst_id)
 
-    # Ready to geocode bursts
-    processed_burst_ids = set()
+    # Generate runconfigs and runfiles grouped by burst_id
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    os.makedirs(f'{work_dir}/runconfigs', exist_ok=True)
 
-    for row in burst_map.itertuples():
-        # Extract base burst_id (without any suffix like _cslc)
-        burst_id = row.burst.burst_id
+    common_args = dict(
+        dem_file=dem_file, work_dir=work_dir, flatten=flatten,
+        pol=pol, x_spac=x_spac, y_spac=y_spac,
+        enable_corrections=enable_corrections,
+        burst_db_file=burst_db_file, tec_path=tec_path,
+    )
 
-        # Check if this is the first time we're processing this burst_id
-        if str(burst_id) not in processed_burst_ids and static_layers:
-            # First occurrence - create BOTH configs
-            
-            # 1. Create static config for geocode metadata
-            runconfig_static_path = create_runconfig_static(
-                row,
-                dem_file=dem_file,
-                work_dir=work_dir,
-                flatten=flatten,
-                pol=pol,
-                x_spac=x_spac,
-                y_spac=y_spac,
-                enable_corrections=enable_corrections,
-                burst_db_file=burst_db_file,
-                tec_path=tec_path,
-            )
-            
-            # 2. Create regular config for CSLC processing
-            runconfig_path = create_runconfig(
-                row,
-                dem_file=dem_file,
-                work_dir=work_dir,
-                flatten=flatten,
-                pol=pol,
-                x_spac=x_spac,
-                y_spac=y_spac,
-                enable_corrections=enable_corrections,
-                burst_db_file=burst_db_file,
-                tec_path=tec_path,
-            )
-            
+    for burst_id, group_df in burst_map.groupby('burst_id'):
+        gdf = group_df.sort_values('date')
+
+        if static_layers:
+            first_row = gdf.iloc[0]
+            runconfig_static = create_runconfig(
+                first_row, **common_args, static=True)
+            date_static = first_row.burst.sensing_start.strftime("%Y%m%d")
+            runfile_static = f'{run_dir}/run_{date_static}_{burst_id}_static.sh'
+            with open(runfile_static, 'w') as rsh:
+                rsh.write(f'python {script_path}/s1_cslc.py {runconfig_static}\n')
+
+        for row in gdf.itertuples():
+            runconfig = create_runconfig(row, **common_args)
             date_str = row.burst.sensing_start.strftime("%Y%m%d")
-            
-            # Create script for geocode metadata processing
-            geocode_runfile_name = f'{run_dir}/run_{date_str}_{burst_id}_static.sh'
-            with open(geocode_runfile_name, 'w') as rsh:
-                path = os.path.dirname(os.path.realpath(__file__))
-                rsh.write(f'python {path}/s1_geocode_metadata.py {runconfig_static_path}\n')
-            
-            # Create script for CSLC processing
-            cslc_runfile_name = f'{run_dir}/run_{date_str}_{burst_id}.sh'
-            with open(cslc_runfile_name, 'w') as rsh:
-                path = os.path.dirname(os.path.realpath(__file__))
-                rsh.write(f'python {path}/s1_cslc.py {runconfig_path}\n')
-            
-            processed_burst_ids.add(str(burst_id))
-            
-        else:
-            # Subsequent occurrence - only create regular config for CSLC
-            runconfig_path = create_runconfig(
-                row,
-                dem_file=dem_file,
-                work_dir=work_dir,
-                flatten=flatten,
-                pol=pol,
-                x_spac=x_spac,
-                y_spac=y_spac,
-                enable_corrections=enable_corrections,
-                burst_db_file=burst_db_file,
-                tec_path=tec_path,
-            )
-            
-            date_str = row.burst.sensing_start.strftime("%Y%m%d")
-            runfile_name = f'{run_dir}/run_{date_str}_{burst_id}.sh'
-            with open(runfile_name, 'w') as rsh:
-                path = os.path.dirname(os.path.realpath(__file__))
-                rsh.write(f'python {path}/s1_cslc.py {runconfig_path}\n')
+            runfile = f'{run_dir}/run_{date_str}_{burst_id}.sh'
+            with open(runfile, 'w') as rsh:
+                rsh.write(f'python {script_path}/s1_cslc.py {runconfig}\n')
 
     end_time = time.perf_counter()
     print('Elapsed time (min):', (end_time - start_time) / 60.0)
